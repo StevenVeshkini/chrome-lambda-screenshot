@@ -1,0 +1,26 @@
+# serverless.yml
+service: ss
+
+provider:
+  name: aws
+  region: us-east-1
+  versionFunctions: false
+  runtime: nodejs12.x
+  stage: prod
+
+functions:
+  screenshot:
+    handler: screenshot.handler
+    memorySize: 1536
+    timeout: 90
+    layers:
+      # layer that contains chrome-aws-lambda@3.1.0
+      - arn:aws:lambda:us-east-1:936134894001:layer:Puppeteer:1
+
+package:
+  excludeDevDependencies: true
+  exclude:
+    - "./**"
+  include:
+    - screenshot.js
+    - discordHook.js

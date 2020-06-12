@@ -1,0 +1,23 @@
+{
+  "name": "chrome-lambda-screenshot",
+  "version": "1.0.0",
+  "description": "Takes a full page screenshot via Puppeteer and sends it to a Discord bot.",
+  "main": "screenshot.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/StevenVeshkini/chrome-lambda-screenshot.git"
+  },
+  "author": "Steven Veshkini",
+  "license": "MIT",
+  "homepage": "https://github.com/StevenVeshkini/chrome-lambda-screenshot#readme",
+  "dependencies": {
+    "axios": "^0.19.2",
+    "form-data": "^3.0.0",
+    "puppeteer-extra": "^3.1.9",
+    "puppeteer-extra-plugin-stealth": "^2.4.9"
+  },
+  "devDependencies": {
+    "chrome-aws-lambda": "^3.1.0",
+    "puppeteer-core": "^3.1.0"
+  }
+}
