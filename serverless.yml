@@ -1,4 +1,5 @@
 # serverless.yml
+# serverless invoke --f screenshot --path launch.jso
 service: ss
 
 provider:
@@ -10,7 +11,7 @@ provider:
 
 functions:
   screenshot:
-    handler: screenshot.handler
+    handler: src/screenshot.handler
     memorySize: 1536
     timeout: 90
     layers:
@@ -20,7 +21,7 @@ functions:
 package:
   excludeDevDependencies: true
   exclude:
-    - "./**"
+    - ./**
+    - '!node_modules/**'
   include:
-    - screenshot.js
-    - discordHook.js
+    - src/**
