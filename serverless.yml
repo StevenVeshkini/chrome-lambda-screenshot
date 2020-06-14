@@ -1,5 +1,4 @@
 # serverless.yml
-# serverless invoke --f screenshot --path launch.jso
 service: ss
 
 provider:
