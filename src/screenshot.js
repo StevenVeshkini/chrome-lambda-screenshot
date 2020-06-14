@@ -1,25 +1,15 @@
 const chromium = require("chrome-aws-lambda");
-const {
-  addExtra
-} = require("puppeteer-extra");
+const { addExtra } = require("puppeteer-extra");
 const puppeteerExtra = addExtra(chromium.puppeteer);
 const StealthPlugin = require("puppeteer-extra-plugin-stealth");
-const stealthPlugin = StealthPlugin();
-const puppeteerExtraPluginUserAgentOverride = require("puppeteer-extra-plugin-stealth/evasions/user-agent-override");
-stealthPlugin.enabledEvasions.delete("user-agent-override");
-puppeteerExtra.use(stealthPlugin);
-const pluginUserAgentOverride = puppeteerExtraPluginUserAgentOverride({
-  platform: "Linux x86_64",
-});
-puppeteerExtra.use(pluginUserAgentOverride);
+const stealth = StealthPlugin();
+puppeteerExtra.use(stealth);
 
 const fs = require("fs");
-const {
-  sendImagesWebhook
-} = require("./discordHook");
+const { sendImagesWebhook } = require("./discordHook");
 
-const WINDOW_WIDTH = 1280;
-const WINDOW_HEIGHT = 800;
+const SCREEN_WIDTH = 1280;
+const SCREEN_HEIGHT = 800;
 
 const createBrowser = async () => {
   let exec_path = await chromium.executablePath;
@@ -27,7 +17,9 @@ const createBrowser = async () => {
     exec_path = process.env.DEV_CHROMIUM_PATH;
   }
   const browser = await puppeteerExtra.launch({
-    args: chromium.args.concat([`--window-size=${WINDOW_WIDTH},${WINDOW_HEIGHT}`]),
+    args: chromium.args.concat([
+      `--window-size=${SCREEN_WIDTH},${SCREEN_HEIGHT}`,
+    ]),
     defaultViewport: null,
     executablePath: exec_path,
     headless: true,
@@ -44,48 +36,63 @@ const takeScreenshot = async (args) => {
     await page.setDefaultNavigationTimeout(45000);
 
     await page.goto(args.screenshotURL, {
-      waitUntil: "networkidle2"
+      waitUntil: "networkidle0",
     });
+
+    // Scrolls through the page to force lazy load images to load
+    // then scrolls back to top of page.
+    // Note: Script might end before all images are loaded.
     await autoScroll(page);
+    await page.evaluate((_) => {
+      window.scrollTo(0, 0);
+    });
 
     // Get the content size of the full page
     // and set the viewport to that size so it is
-    // able to be screenshotted
+    // able to be screenshotted.
     const client = await page.target().createCDPSession();
     const metrics = await client.send("Page.getLayoutMetrics");
-    const width = Math.ceil(metrics.contentSize.width);
-    const height = Math.ceil(metrics.contentSize.height);
-    await page.setViewport({
-      width,
-      height,
-    });
+    const contentWidth = Math.ceil(metrics.contentSize.width);
+    const contentHeight = Math.ceil(metrics.contentSize.height);
 
+    // Split up screenshots depending on page content size.
     let files = [];
-    // Split up screenshots depending on content size
     let screenshotted = 0;
-    const numScreenshots = Math.ceil(height / (WINDOW_HEIGHT * 2));
+    const numScreenshots = Math.ceil(contentHeight / (SCREEN_HEIGHT * 2));
 
-    // Can send a maximum of 10 images through Discord webhook
+    // Can send a maximum of 10 images through Discord webhook.
     let heightWindow;
     if (numScreenshots > 10) {
-      heightWindow = height / 10;
+      heightWindow = contentHeight / 10;
     } else {
-      heightWindow = height / numScreenshots;
+      heightWindow = contentHeight / numScreenshots;
     }
-    while (screenshotted < height) {
+
+    // Set the viewport to take screenshots of the same size.
+    await page.setViewport({
+      width: contentWidth,
+      height: Math.ceil(heightWindow),
+      deviceScaleFactor: 1,
+    });
+
+    while (screenshotted < contentHeight) {
       const ss = await page.screenshot({
         clip: {
           x: 0,
           y: screenshotted,
-          width,
+          width: contentWidth,
           height: heightWindow,
         },
+        type: "jpeg",
+        quality: 75,
       });
+      await page.evaluate((amount) => {
+        window.scrollBy(0, amount);
+      }, heightWindow);
       screenshotted += heightWindow;
       files.push(ss);
     }
     await sendImagesWebhook(args, files);
-
   } catch (error) {
     throw error;
   } finally {
@@ -95,7 +102,7 @@ const takeScreenshot = async (args) => {
   }
 };
 
-const autoScroll = async (page) => {
+const autoScroll = async (page, height) => {
   await page.evaluate(async () => {
     await new Promise((resolve, reject) => {
       let totalHeight = 0;
@@ -109,10 +116,10 @@ const autoScroll = async (page) => {
           clearInterval(timer);
           resolve();
         }
-      }, 100);
+      }, 250);
     });
   });
-}
+};
 
 module.exports.handler = async (event) => {
   try {
