@@ -11,7 +11,7 @@
   "license": "MIT",
   "homepage": "https://github.com/StevenVeshkini/chrome-lambda-screenshot#readme",
   "dependencies": {
-    "axios": "^0.19.2",
+    "axios": "^0.21.1",
     "form-data": "^3.0.0",
     "puppeteer-extra": "^3.1.9",
     "puppeteer-extra-plugin-stealth": "^2.4.9"
